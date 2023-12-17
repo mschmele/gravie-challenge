@@ -1,0 +1,1 @@
+web: java $JVM_OPTS -cp target/the-bomb-dot-com.jar clojure.main -m the-bomb-dot-com.server

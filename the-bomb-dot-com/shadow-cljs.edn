@@ -1,0 +1,7 @@
+{:lein         {:profile "+shadow-cljs"}
+ :builds       {:app {:target     :browser
+                      :output-dir "resources/public/js"
+                      :asset-path "/js"
+                      :modules    {:app {:init-fn the-bomb-dot-com.core/init!}}}}
+ :dev-http     {3000 {:root    "resources/public"
+                      :handler the-bomb-dot-com.handler/app}}}
