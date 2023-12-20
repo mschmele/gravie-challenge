@@ -1,27 +1,31 @@
 (ns the-bomb-dot-com.search
   (:require
+   [cljs-http.client :as http]
+   [cljs.core.async :refer [<! go]]
    [reagent.core :as reagent :refer [atom]]
-   [reagent.dom :as rdom]
-   [reagent.session :as session]
-   [reitit.frontend :as reitit]
-   [clerk.core :as clerk]
-   [accountant.core :as accountant]))
+   [the-bomb-dot-com.checkout :as checkout]))
 
-(defonce search-term (atom ""))
 (defonce results (atom ()))
 
 (defn- find-game-by-title [title]
-  (println (str "input: " title))
-  (reset! results [{:title (str title " soup IV") :genre "soup"}
-                   {:title (str title " soup XVII") :genre "soup 2"}])
-  
-  (println @results))
+  (go
+    (let [query (<! (http/get "http://localhost:3000/find-games"
+                              {:query-params {:game title}}))] 
+      (reset! results (:body query)))))
 
 (defn- display-results []
-  (let [please-work (map (fn [result]
-                           [:li (str "Title: " (:title result) " | genre: " (:genre result))])
+  (let [results (map (fn [{:keys [id name aliases :gb-link]}]
+                           [:ul 
+                            [:li (str "Title: " name)]
+                            [:li (str "ID: " id)]
+                            (when (seq aliases)
+                             [:li (str "Aliases: " aliases)])
+                            [:li (str "More information: " gb-link)]
+                            [:input {:type "button"
+                                     :value "add to cart"
+                                     :on-click #(checkout/add-to-cart! {:id id :name name})}]])
                          @results)]
-    [:ul please-work]))
+    [:ul results]))
 
 (defn render [_routing-data]
   [:span.main
@@ -30,6 +34,9 @@
             :placeholder "search by title"
             :on-key-down (fn [e]
                            (when (= "Enter" (.-key e))
-                             (reset! search-term (.. e -target -value))
-                             (find-game-by-title @search-term)))}]
+                             (find-game-by-title (.. e -target -value))))}]
    [:div (display-results)]])
+
+(comment (tap> (go (<! (http/get "http://localhost:3000/find-games"
+                                 {:query-params {:game "metroid prime"}}))))
+         (println *e))
